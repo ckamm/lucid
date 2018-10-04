@@ -68,15 +68,14 @@ def homography(
     center = translation(shape[0] // 2, shape[1] // 2)
     uncenter = translation(-shape[0] // 2, -shape[1] // 2)
 
-    shear_centered = np.matmul(center, np.matmul(shear, uncenter))
-    rotate_centered = np.matmul(center, np.matmul(rotation, uncenter))
-
     return (
         np.matmul(final_translation,
+        np.matmul(center,
         np.matmul(projection,
-        np.matmul(shear_centered,
-        np.matmul(rotate_centered,
-                  initial_translation))))
+        np.matmul(shear,
+        np.matmul(rotation,
+        np.matmul(uncenter,
+                  initial_translation))))))
     )
 
 
