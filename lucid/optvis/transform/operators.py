@@ -34,7 +34,7 @@ def rotation(angleInRadians, axis):
 
 
 def deformation(x, y):
-    matrix = np.identity(3, dtype=np.float32)
+    matrix = np.identity(3, dtype=np.float64)
     matrix[0, 1] = x
     matrix[1, 0] = y
     return matrix
@@ -49,14 +49,14 @@ def shearing(angle, x, y):
 
 
 def translation(translation_x, translation_y):
-    matrix = np.identity(3, dtype=np.float32)
+    matrix = np.identity(3, dtype=np.float64)
     matrix[0, 2] = translation_x
     matrix[1, 2] = translation_y
     return matrix
 
 
 def projection(vanishing_point_1, vanishing_point_2):
-    matrix = np.identity(3, dtype=np.float32)
+    matrix = np.identity(3, dtype=np.float64)
     matrix[2, 0] = vanishing_point_1
     matrix[2, 1] = vanishing_point_2
     return matrix
