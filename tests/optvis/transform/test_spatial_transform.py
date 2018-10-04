@@ -26,7 +26,7 @@ def _find_single_dot(array):
     assert np.all(value_range < MAX_SPREAD)
 
     values = array[indices]
-    weighted_location = values.dot(np.transpose(indices))
+    weighted_location = values.dot(np.transpose(indices)) / sum(values)
     return weighted_location
 
 MAX_SPREAD = 3 # px that a single pixel may have been stretched over
