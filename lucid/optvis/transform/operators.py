@@ -101,5 +101,11 @@ def _parameterized_flattened_homography(
     matrix = homography(
         initial_translate, rotate, shear, project, final_translate, shape_xy
     )
-    # return first 8 entries to conform to tf.contrib.image.transform intrerface
+    # conform to tf.contrib.image.transform interface
+    # so invert, since actually the inverse transformation will be done
+    # TODO: What if the matrix is singular due to shear? (shear_x*shear_y == 1)
+    matrix = np.linalg.inv(matrix)
+    # it expects the lower right corner to be 1 - since there are only 8 dof that's doable
+    matrix = matrix / matrix[2, 2]
+    # and select the 8 values it needs
     return np.reshape(matrix, [-1])[:8].astype(np.float32)
