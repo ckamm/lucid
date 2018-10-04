@@ -101,11 +101,25 @@ def _parameterized_flattened_homography(
     matrix = _homography(
         initial_translate, rotate, shear, project, final_translate, shape_xy
     )
+    #
     # conform to tf.contrib.image.transform interface
-    # so invert, since actually the inverse transformation will be done
+    #
+
+    # in image.transform the first index is the y coordinate
+    # TODO: Maybe this ordering is normal for our inputs too?
+    flip = np.zeros((3, 3), dtype=np.float64)
+    flip[1, 0] = 1
+    flip[0, 1] = 1
+    flip[2, 2] = 1
+    matrix = np.matmul(flip, np.matmul(matrix, flip))
+
+    # invert, since actually the inverse transformation will be done
     # TODO: What if the matrix is singular due to shear? (shear_x*shear_y == 1)
     matrix = np.linalg.inv(matrix)
-    # it expects the lower right corner to be 1 - since there are only 8 dof that's doable
+
+    # it expects the lower right corner to be 1 - the transformation is
+    # invariant to scalar multiplication so just divide by it
     matrix = matrix / matrix[2, 2]
+
     # and select the 8 values it needs
     return np.reshape(matrix, [-1])[:8].astype(np.float32)

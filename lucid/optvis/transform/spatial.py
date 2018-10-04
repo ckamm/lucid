@@ -106,46 +106,78 @@ def rotate(angles, units="degrees", interpolation="BILINEAR", seed=None):
 
     return inner
 
+def default_homography_parameters(shape, seed=None):
+    """Returns parameters for homography() that create a random transform
+    that usually results in only slight adjustment of the image"""
+    d = np.max(shape)
+    return dict(
+      translation1_x = tf.truncated_normal([], stddev=3, seed=seed),
+      translation1_y = tf.truncated_normal([], stddev=3, seed=seed),
+      rotationAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
+      shearingAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
+      shear_x = tf.truncated_normal([], stddev=1e-2, seed=seed),
+      shear_y = tf.truncated_normal([], stddev=1e-2, seed=seed),
 
-def homography(_, seed=None, interpolation="BILINEAR"):
+      # intuition for vanishing_point:
+      # - values above roughly 1/(size/2) make no sense because one edge of the
+      #   image will be blown away to infinity
+      # - values below roughly 1/(size/2)/(d/2) will displace pixels by
+      #   around one unit
+      vanishing_point_x = tf.truncated_normal([], stddev=1.0/(shape[0]/2)/(d/2), seed=seed),
+      vanishing_point_y = tf.truncated_normal([], stddev=1.0/(shape[1]/2)/(d/2), seed=seed),
+
+      translation2_x = tf.truncated_normal([], stddev=2, seed=seed),
+      translation2_y = tf.truncated_normal([], stddev=2, seed=seed),
+    )
+
+def null_homography_parameters():
+    """Returns parameters for homography() that make it an identity-transform"""
+    return dict(
+      translation1_x = 0.0,
+      translation1_y = 0.0,
+      rotationAngleInRadians = 0.0,
+      shearingAngleInRadians = 0.0,
+      shear_x = 0.0,
+      shear_y = 0.0,
+      vanishing_point_x = 0.0,
+      vanishing_point_y = 0.0,
+      translation2_x = 0.0,
+      translation2_y = 0.0,
+    )
+
+def homography(parameters=None, seed=None, interpolation="BILINEAR"):
     """Most general 2D transform that can replace all our spatial transforms.
     Consists of an affine transformation + a perspective projection.
-    TODO: how should we pass all the parameters? Dict with defaults? Bunch of bools? Long list of arguments?
+
+    By default, when parameters is None, a random homography based on
+    default_homography_parameters() is performed.
     """
 
     def inner(image_t):
-        translation1_x = tf.truncated_normal([], stddev=3)
-        translation1_y = tf.truncated_normal([], stddev=3)
-        rotationAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5))
-        shearingAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5))
-        shear_x = tf.truncated_normal([], stddev=1e-2)
-        shear_y = tf.truncated_normal([], stddev=1e-2)
-        vanishing_point_x = tf.truncated_normal([], stddev=1e-4)
-        vanishing_point_y = tf.truncated_normal([], stddev=1e-4)
-        translation2_x = tf.truncated_normal([], stddev=2)
-        translation2_y = tf.truncated_normal([], stddev=2)
         shape_xy = tf.shape(image_t)[1:3]
+        if parameters is None:
+          parameters = default_homography_parameters(shape_xy, seed)
 
         transform_t = tf.py_func(
             _parameterized_flattened_homography,
             [
-                translation1_x,
-                translation1_y,
-                rotationAngleInRadians,
-                shearingAngleInRadians,
-                shear_x,
-                shear_y,
-                vanishing_point_x,
-                vanishing_point_y,
-                translation2_x,
-                translation2_y,
+                parameters['translation1_x'],
+                parameters['translation1_y'],
+                parameters['rotationAngleInRadians'],
+                parameters['shearingAngleInRadians'],
+                parameters['shear_x'],
+                parameters['shear_y'],
+                parameters['vanishing_point_x'],
+                parameters['vanishing_point_y'],
+                parameters['translation2_x'],
+                parameters['translation2_y'],
                 shape_xy,
             ],
             [tf.float32],
             stateful=False,
         )[0]
         transform_t.set_shape([8])
-        print(transform_t.eval())
+        # print(transform_t.eval())
         # print([t.eval() for t in result])
         transformed_t = tf.contrib.image.transform(
             image_t, transform_t, interpolation=interpolation

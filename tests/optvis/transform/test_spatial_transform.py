@@ -10,6 +10,7 @@ from lucid.optvis.transform.spatial import (
     jitter,
     pad,
     homography,
+    null_homography_parameters,
     crop_or_pad_to_shape,
 )
 # from lucid.misc.io import save
@@ -53,6 +54,42 @@ def test_spatial(transform, arg):
     new_location = _find_single_dot(transformed_image)
     distance = np.linalg.norm(initial_location - new_location)
     assert distance >= MIN_DISTANCE and distance < MAX_DISTANCE
+
+@pytest.mark.parametrize("params, start, expected", [
+  ({}, (160, 80), (160, 80)),
+  ({'translation1_x': 3.0}, (160, 80), (163, 80)),
+  ({'translation1_y': 3.0}, (160, 80), (160, 83)),
+  ({'translation2_x': 3.0}, (160, 80), (163, 80)),
+  ({'translation2_y': 3.0}, (160, 80), (160, 83)),
+  ({'rotationAngleInRadians': math.pi / 2}, (128 + 32, 64 + 16), (128 - 16, 64 + 32)),
+  ({'rotationAngleInRadians': math.pi / 2, 'translation1_x': 3}, (128 + 32, 64 + 16), (128 - 16, 64 + 32 + 3)), # effectively move rotation center 3 to the left
+  ({'rotationAngleInRadians': math.pi / 2, 'translation2_x': 3}, (128 + 32, 64 + 16), (128 - 16 + 3, 64 + 32)),
+  ({'shearingAngleInRadians': 3.0}, (160, 80), (160, 80)),
+  ({'shear_x': 0.5}, (160, 80), (128 + 32 + 16 / 2, 80)),
+  ({'shear_y': 0.5}, (160, 80), (160, 64 + 16 + 32 / 2)),
+  ({'shearingAngleInRadians': math.pi / 2, 'shear_x': -0.5}, (160, 80), (160, 64 + 16 + 32 / 2)),
+  ({'vanishing_point_x': 1 / 128}, (128, 80), (128, 80)),
+  ({'vanishing_point_x': 1 / 128}, (160, 80), (128 + 32 / (1 + 32 / 128), 64 + 16 / (1 + 32 / 128))),
+  ({'vanishing_point_y': 1 / 128}, (160, 64), (160, 64)),
+  ({'vanishing_point_y': 1 / 128}, (160, 80), (128 + 32 / (1 + 16 / 128), 64 + 16 / (1 + 16 / 128))),
+])
+def test_homography(params, start, expected):
+    params = dict(null_homography_parameters(), **params)
+    image = np.zeros([1, 256, 128, 1])
+    image[0, start[0], start[1]] = np.ones(())
+    with tf.Session() as sess:
+        spatial_transform = homography(params)
+        image_t = tf.constant(image)
+        transformed_t = spatial_transform(image_t)
+        transformed_image = transformed_t.eval()
+    new_location = _find_single_dot(transformed_image)
+    dist = np.abs(new_location - expected)
+    # from what I can tell large errors enter either in
+    # image.transform or find_single_dot - thus accept a dist of 2
+    if np.max(dist) >= 2:
+        print(new_location, expected)
+    assert np.max(dist) < 2
+
 
 
 # TODO: test reflection mode, test uniform
