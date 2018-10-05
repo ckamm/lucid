@@ -151,6 +151,8 @@ def homography(parameters=None, seed=None, interpolation="BILINEAR"):
 
     By default, when parameters is None, a random homography based on
     homography_parameters_random() is performed.
+
+    Note that points outside of the projected range are filled with 0.
     """
 
     def inner(image_t):

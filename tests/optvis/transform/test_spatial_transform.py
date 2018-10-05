@@ -55,6 +55,7 @@ def test_spatial(transform, arg):
     distance = np.linalg.norm(initial_location - new_location)
     assert distance >= MIN_DISTANCE and distance < MAX_DISTANCE
 
+
 @pytest.mark.parametrize("params, start, expected", [
   ({}, (160, 80), (160, 80)),
   ({'translation1_x': 3.0}, (160, 80), (163, 80)),
@@ -90,6 +91,20 @@ def test_homography(params, start, expected):
         print(new_location, expected)
     assert np.max(dist) < 2
 
+
+def test_homography_padding():
+    params = dict(homography_parameters_identity(), translation1_x=1.0)
+    image = np.zeros([1, 128, 128, 1])
+    image[0, :, :] = 0.7 * np.ones(())
+    with tf.Session() as sess:
+        spatial_transform = homography(params)
+        image_t = tf.constant(image)
+        transformed_t = spatial_transform(image_t)
+        transformed_image = transformed_t.eval()
+    assert transformed_image[0, 0, 0] < 1e-6
+    assert transformed_image[0, 0, 127] < 1e-6
+    assert abs(transformed_image[0, 1, 0] - 0.7) < 1e-6
+    assert abs(transformed_image[0, 1, 127] - 0.7) < 1e-6
 
 
 # TODO: test reflection mode, test uniform
