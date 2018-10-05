@@ -52,7 +52,7 @@ def test_spatial(transform, arg):
     # save(rotated_image, "image-rotated.png")
     new_location = _find_single_dot(transformed_image)
     distance = np.linalg.norm(initial_location - new_location)
-    assert distance > MIN_DISTANCE and distance < MAX_DISTANCE
+    assert distance >= MIN_DISTANCE and distance < MAX_DISTANCE
 
 
 # TODO: test reflection mode, test uniform
