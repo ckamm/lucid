@@ -106,7 +106,7 @@ def rotate(angles, units="degrees", interpolation="BILINEAR", seed=None):
 
     return inner
 
-def default_homography_parameters(shape, seed=None):
+def homography_parameters_random(shape, seed=None):
     """Returns parameters for homography() that create a random transform
     that usually results in only slight adjustment of the image"""
     d = tf.reduce_max(shape)
@@ -114,9 +114,9 @@ def default_homography_parameters(shape, seed=None):
       translation1_x = tf.truncated_normal([], stddev=3, seed=seed),
       translation1_y = tf.truncated_normal([], stddev=3, seed=seed),
       rotationAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
-      shearingAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
-      shear_x = tf.truncated_normal([], stddev=1e-2, seed=seed),
-      shear_y = tf.truncated_normal([], stddev=1e-2, seed=seed),
+      scalingAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
+      scaling_x = 1.0 + tf.truncated_normal([], stddev=1e-2, seed=seed, dtype=tf.float64),
+      scaling_y = 1.0 + tf.truncated_normal([], stddev=1e-2, seed=seed, dtype=tf.float64),
 
       # Intuition for vanishing_points:
       # - values above roughly 1/(size/2) make no sense because one edge of the
@@ -130,15 +130,15 @@ def default_homography_parameters(shape, seed=None):
       translation2_y = tf.truncated_normal([], stddev=2, seed=seed),
     )
 
-def null_homography_parameters():
+def homography_parameters_identity():
     """Returns parameters for homography() that make it an identity-transform"""
     return dict(
       translation1_x = 0.0,
       translation1_y = 0.0,
       rotationAngleInRadians = 0.0,
-      shearingAngleInRadians = 0.0,
-      shear_x = 0.0,
-      shear_y = 0.0,
+      scalingAngleInRadians = 0.0,
+      scaling_x = 1.0,
+      scaling_y = 1.0,
       vanishing_point_x = 0.0,
       vanishing_point_y = 0.0,
       translation2_x = 0.0,
@@ -150,13 +150,13 @@ def homography(parameters=None, seed=None, interpolation="BILINEAR"):
     Consists of an affine transformation + a perspective projection.
 
     By default, when parameters is None, a random homography based on
-    default_homography_parameters() is performed.
+    homography_parameters_random() is performed.
     """
 
     def inner(image_t):
         shape_xy = tf.shape(image_t)[1:3]
         if parameters is None:
-            params = default_homography_parameters(shape_xy, seed)
+            params = homography_parameters_random(shape_xy, seed)
         else:
             params = parameters
 
@@ -166,9 +166,9 @@ def homography(parameters=None, seed=None, interpolation="BILINEAR"):
                 params['translation1_x'],
                 params['translation1_y'],
                 params['rotationAngleInRadians'],
-                params['shearingAngleInRadians'],
-                params['shear_x'],
-                params['shear_y'],
+                params['scalingAngleInRadians'],
+                params['scaling_x'],
+                params['scaling_y'],
                 params['vanishing_point_x'],
                 params['vanishing_point_y'],
                 params['translation2_x'],

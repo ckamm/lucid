@@ -10,7 +10,7 @@ from lucid.optvis.transform.spatial import (
     jitter,
     pad,
     homography,
-    null_homography_parameters,
+    homography_parameters_identity,
     crop_or_pad_to_shape,
 )
 # from lucid.misc.io import save
@@ -64,17 +64,17 @@ def test_spatial(transform, arg):
   ({'rotationAngleInRadians': math.pi / 2}, (128 + 32, 64 + 16), (128 - 16, 64 + 32)),
   ({'rotationAngleInRadians': math.pi / 2, 'translation1_x': 3}, (128 + 32, 64 + 16), (128 - 16, 64 + 32 + 3)), # effectively move rotation center 3 to the left
   ({'rotationAngleInRadians': math.pi / 2, 'translation2_x': 3}, (128 + 32, 64 + 16), (128 - 16 + 3, 64 + 32)),
-  ({'shearingAngleInRadians': 3.0}, (160, 80), (160, 80)),
-  ({'shear_x': 0.5}, (160, 80), (128 + 32 + 16 / 2, 80)),
-  ({'shear_y': 0.5}, (160, 80), (160, 64 + 16 + 32 / 2)),
-  ({'shearingAngleInRadians': math.pi / 2, 'shear_x': -0.5}, (160, 80), (160, 64 + 16 + 32 / 2)),
+  ({'scalingAngleInRadians': 3.0}, (160, 80), (160, 80)),
+  ({'scaling_x': 0.5}, (160, 80), (128 + 32 / 2, 80)),
+  ({'scaling_y': 0.5}, (160, 80), (160, 64 + 16 / 2)),
+  ({'scalingAngleInRadians': math.pi / 2, 'scaling_x': 0.5}, (160, 80), (160, 64 + 16 / 2)),
   ({'vanishing_point_x': 1 / 128}, (128, 80), (128, 80)),
   ({'vanishing_point_x': 1 / 128}, (160, 80), (128 + 32 / (1 + 32 / 128), 64 + 16 / (1 + 32 / 128))),
   ({'vanishing_point_y': 1 / 128}, (160, 64), (160, 64)),
   ({'vanishing_point_y': 1 / 128}, (160, 80), (128 + 32 / (1 + 16 / 128), 64 + 16 / (1 + 16 / 128))),
 ])
 def test_homography(params, start, expected):
-    params = dict(null_homography_parameters(), **params)
+    params = dict(homography_parameters_identity(), **params)
     image = np.zeros([1, 256, 128, 1])
     image[0, start[0], start[1]] = np.ones(())
     with tf.Session() as sess:
