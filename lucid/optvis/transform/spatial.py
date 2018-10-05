@@ -109,7 +109,7 @@ def rotate(angles, units="degrees", interpolation="BILINEAR", seed=None):
 def default_homography_parameters(shape, seed=None):
     """Returns parameters for homography() that create a random transform
     that usually results in only slight adjustment of the image"""
-    d = np.max(shape)
+    d = tf.reduce_max(shape)
     return dict(
       translation1_x = tf.truncated_normal([], stddev=3, seed=seed),
       translation1_y = tf.truncated_normal([], stddev=3, seed=seed),
@@ -118,13 +118,13 @@ def default_homography_parameters(shape, seed=None):
       shear_x = tf.truncated_normal([], stddev=1e-2, seed=seed),
       shear_y = tf.truncated_normal([], stddev=1e-2, seed=seed),
 
-      # intuition for vanishing_point:
+      # Intuition for vanishing_points:
       # - values above roughly 1/(size/2) make no sense because one edge of the
       #   image will be blown away to infinity
       # - values below roughly 1/(size/2)/(d/2) will displace pixels by
       #   around one unit
-      vanishing_point_x = tf.truncated_normal([], stddev=1.0/(shape[0]/2)/(d/2), seed=seed),
-      vanishing_point_y = tf.truncated_normal([], stddev=1.0/(shape[1]/2)/(d/2), seed=seed),
+      vanishing_point_x = tf.truncated_normal([], stddev=1.0/(shape[0]/2)/(d/2), dtype=tf.float64, seed=seed),
+      vanishing_point_y = tf.truncated_normal([], stddev=1.0/(shape[1]/2)/(d/2), dtype=tf.float64, seed=seed),
 
       translation2_x = tf.truncated_normal([], stddev=2, seed=seed),
       translation2_y = tf.truncated_normal([], stddev=2, seed=seed),
@@ -156,21 +156,23 @@ def homography(parameters=None, seed=None, interpolation="BILINEAR"):
     def inner(image_t):
         shape_xy = tf.shape(image_t)[1:3]
         if parameters is None:
-          parameters = default_homography_parameters(shape_xy, seed)
+            params = default_homography_parameters(shape_xy, seed)
+        else:
+            params = parameters
 
         transform_t = tf.py_func(
             _parameterized_flattened_homography,
             [
-                parameters['translation1_x'],
-                parameters['translation1_y'],
-                parameters['rotationAngleInRadians'],
-                parameters['shearingAngleInRadians'],
-                parameters['shear_x'],
-                parameters['shear_y'],
-                parameters['vanishing_point_x'],
-                parameters['vanishing_point_y'],
-                parameters['translation2_x'],
-                parameters['translation2_y'],
+                params['translation1_x'],
+                params['translation1_y'],
+                params['rotationAngleInRadians'],
+                params['shearingAngleInRadians'],
+                params['shear_x'],
+                params['shear_y'],
+                params['vanishing_point_x'],
+                params['vanishing_point_y'],
+                params['translation2_x'],
+                params['translation2_y'],
                 shape_xy,
             ],
             [tf.float32],
