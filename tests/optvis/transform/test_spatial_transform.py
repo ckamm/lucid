@@ -1,9 +1,11 @@
 import tensorflow as tf
 import numpy as np
 import math
+import time
 
 import pytest
 
+import lucid.optvis.transform
 from lucid.optvis.transform.spatial import (
     rotate,
     scale,
@@ -79,7 +81,7 @@ def test_homography(params, start, expected):
     image = np.zeros([1, 256, 128, 1])
     image[0, start[0], start[1]] = np.ones(())
     with tf.Session() as sess:
-        spatial_transform = homography(params)
+        spatial_transform = homography(lambda: params)
         image_t = tf.constant(image)
         transformed_t = spatial_transform(image_t)
         transformed_image = transformed_t.eval()
@@ -97,7 +99,7 @@ def test_homography_padding():
     image = np.zeros([1, 128, 128, 1])
     image[0, :, :] = 0.7 * np.ones(())
     with tf.Session() as sess:
-        spatial_transform = homography(params)
+        spatial_transform = homography(lambda: params)
         image_t = tf.constant(image)
         transformed_t = spatial_transform(image_t)
         transformed_image = transformed_t.eval()
@@ -105,6 +107,41 @@ def test_homography_padding():
     assert transformed_image[0, 0, 127] < 1e-6
     assert abs(transformed_image[0, 1, 0] - 0.7) < 1e-6
     assert abs(transformed_image[0, 1, 127] - 0.7) < 1e-6
+
+
+def test_transforms_benchmark():
+    image = np.zeros([1, 256, 256, 1])
+    with tf.Session() as sess:
+        spatial_transform = lucid.optvis.transform.compose(lucid.optvis.transform.standard_transforms)
+        image_t = tf.constant(image)
+        transformed_t = spatial_transform(image_t)
+
+        iters = 1000
+        start_time = time.time()
+        for _ in range(iters):
+          sess.run(transformed_t)
+        total_wall_time = time.time() - start_time
+
+        print(total_wall_time)
+        assert total_wall_time == 0
+
+
+def test_homography_benchmark():
+    image = np.zeros([1, 256, 256, 1])
+    with tf.Session() as sess:
+        spatial_transform = homography()
+        image_t = tf.constant(image)
+        transformed_t = spatial_transform(image_t)
+
+        iters = 1000
+        start_time = time.time()
+        for _ in range(iters):
+          sess.run(transformed_t)
+        total_wall_time = time.time() - start_time
+
+        print(total_wall_time)
+        assert total_wall_time == 0
+
 
 
 # TODO: test reflection mode, test uniform

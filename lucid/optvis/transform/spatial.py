@@ -148,7 +148,7 @@ def homography_parameters_identity():
       translation2_y = 0.0,
     )
 
-def homography(parameters=None, seed=None, interpolation="BILINEAR"):
+def homography(param_f=None, seed=None, interpolation="BILINEAR"):
     """Most general 2D transform that can replace all our spatial transforms.
     Consists of an affine transformation + a perspective projection.
 
@@ -160,10 +160,10 @@ def homography(parameters=None, seed=None, interpolation="BILINEAR"):
 
     def inner(image_t):
         shape_xy = tf.shape(image_t)[1:3]
-        if parameters is None:
+        if param_f is None:
             params = homography_parameters_random(shape_xy, seed)
         else:
-            params = parameters
+            params = param_f()
 
         transform_t = tf.py_func(
             _parameterized_flattened_homography,
