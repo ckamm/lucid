@@ -110,6 +110,9 @@ def homography_parameters_random(shape, seed=None):
     """Returns parameters for homography() that create a random transform
     that usually results in only slight adjustment of the image"""
     d = tf.reduce_max(shape)
+    a = (shape[0]/2)*(d/2)
+    b = tf.to_float(a)
+    c = 1.0 / b
     return dict(
       translation1_x = tf.truncated_normal([], stddev=3, seed=seed),
       translation1_y = tf.truncated_normal([], stddev=3, seed=seed),
@@ -123,8 +126,8 @@ def homography_parameters_random(shape, seed=None):
       #   image will be blown away to infinity
       # - values below roughly 1/(size/2)/(d/2) will displace pixels by
       #   around one unit
-      vanishing_point_x = tf.truncated_normal([], stddev=1.0/(shape[0]/2)/(d/2), dtype=tf.float64, seed=seed),
-      vanishing_point_y = tf.truncated_normal([], stddev=1.0/(shape[1]/2)/(d/2), dtype=tf.float64, seed=seed),
+      vanishing_point_x = tf.truncated_normal([], stddev=1.0/tf.to_float((shape[0]/2)*(d/2)), seed=seed),
+      vanishing_point_y = tf.truncated_normal([], stddev=1.0/tf.to_float((shape[1]/2)*(d/2)), seed=seed),
 
       translation2_x = tf.truncated_normal([], stddev=2, seed=seed),
       translation2_y = tf.truncated_normal([], stddev=2, seed=seed),
