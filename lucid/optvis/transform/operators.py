@@ -17,45 +17,24 @@
 
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
+import tensorflow as tf
 
-def _rotation(angleInRadians, axis):
-    cos = np.cos(angleInRadians)
-    sin = np.sin(angleInRadians)
-
-    if axis == 0:
-        raise NotImplementedError
-    elif axis == 1:
-        raise NotImplementedError
-    elif axis == 2:
-        return np.array([[cos, -sin, 0.0], [sin, cos, 0.0], [0.0, 0.0, 1.0]])
-    else:
-        raise ValueError("Axis needs to be one of (0,1,2)!")
+def _rotation(angleInRadians):
+    cos = tf.cos(angleInRadians)
+    sin = tf.sin(angleInRadians)
+    return tf.convert_to_tensor([[cos, -sin, 0.0], [sin, cos, 0.0], [0.0, 0.0, 1.0]], dtype=tf.float32)
 
 def _scaling(angle, x, y):
-    axis = 2 # z
-    rotate = _rotation(angle, axis)
-    unrotate = _rotation(-angle, axis)
+    rotate = _rotation(angle)
+    unrotate = _rotation(-angle)
+    basescale = tf.convert_to_tensor([[x, 0, 0], [0, y, 0], [0, 0, 1]], dtype=tf.float32)
+    return tf.matmul(unrotate, tf.matmul(basescale, rotate))
 
-    basescale = np.identity(3, dtype=np.float64)
-    basescale[0, 0] = x
-    basescale[1, 1] = y
-    return  np.matmul(unrotate, np.matmul(basescale, rotate))
+def _translation(x, y):
+    return tf.convert_to_tensor([[1, 0, x], [0, 1, y], [0, 0, 1]], dtype=tf.float32)
 
-
-def _translation(translation_x, translation_y):
-    matrix = np.identity(3, dtype=np.float64)
-    matrix[0, 2] = translation_x
-    matrix[1, 2] = translation_y
-    return matrix
-
-
-def _projection(vanishing_point_1, vanishing_point_2):
-    matrix = np.identity(3, dtype=np.float64)
-    matrix[2, 0] = vanishing_point_1
-    matrix[2, 1] = vanishing_point_2
-    return matrix
-
+def _projection(x, y):
+    return tf.convert_to_tensor([[1, 0, 0], [0, 1, 0], [x, y, 1]], dtype=tf.float32)
 
 def _homography(
     initial_translation, rotation, scaling, projection, final_translation, shape
@@ -64,12 +43,12 @@ def _homography(
     uncenter = _translation(-shape[0] // 2, -shape[1] // 2)
 
     return (
-        np.matmul(final_translation,
-        np.matmul(center,
-        np.matmul(projection,
-        np.matmul(rotation,
-        np.matmul(scaling,
-        np.matmul(uncenter,
+        tf.matmul(final_translation,
+        tf.matmul(center,
+        tf.matmul(projection,
+        tf.matmul(rotation,
+        tf.matmul(scaling,
+        tf.matmul(uncenter,
                   initial_translation))))))
     )
 
@@ -88,33 +67,29 @@ def _parameterized_flattened_homography(
     shape_xy,
 ):
     initial_translate = _translation(translation1_x, translation1_y)
-    axis = 2  # z-axis: rotate a 2D image in its plane
-    rotate = _rotation(rotationAngleInRadians, axis)
+    rotate = _rotation(rotationAngleInRadians)
     scale = _scaling(scalingAngleInRadians, scaling_x, scaling_y)
     project = _projection(vanishing_point_x, vanishing_point_y)
     final_translate = _translation(translation2_x, translation2_y)
     matrix = _homography(
         initial_translate, rotate, scale, project, final_translate, shape_xy
     )
+
     #
     # conform to tf.contrib.image.transform interface
     #
 
     # in image.transform the first index is the y coordinate
     # TODO: Maybe this ordering is normal for our inputs too?
-    flip = np.zeros((3, 3), dtype=np.float64)
-    flip[1, 0] = 1
-    flip[0, 1] = 1
-    flip[2, 2] = 1
-    matrix = np.matmul(flip, np.matmul(matrix, flip))
+    flip = tf.constant([0, 1, 0, 1, 0, 0, 0, 0, 1], shape=(3, 3), dtype=tf.float32)
+    matrix = tf.matmul(flip, tf.matmul(matrix, flip))
 
     # invert, since actually the inverse transformation will be done
-    # TODO: What if the matrix is singular due to shear? (shear_x*shear_y == 1)
-    matrix = np.linalg.inv(matrix)
+    matrix = tf.linalg.inv(matrix)
 
     # it expects the lower right corner to be 1 - the transformation is
     # invariant to scalar multiplication so just divide by it
     matrix = matrix / matrix[2, 2]
 
     # and select the 8 values it needs
-    return np.reshape(matrix, [-1])[:8].astype(np.float32)
+    return tf.to_float(tf.reshape(matrix, [-1])[:8])

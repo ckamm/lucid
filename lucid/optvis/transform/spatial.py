@@ -165,9 +165,7 @@ def homography(param_f=None, seed=None, interpolation="BILINEAR"):
         else:
             params = param_f()
 
-        transform_t = tf.py_func(
-            _parameterized_flattened_homography,
-            [
+        transform_t = _parameterized_flattened_homography(
                 params['translation1_x'],
                 params['translation1_y'],
                 params['rotationAngleInRadians'],
@@ -178,12 +176,7 @@ def homography(param_f=None, seed=None, interpolation="BILINEAR"):
                 params['vanishing_point_y'],
                 params['translation2_x'],
                 params['translation2_y'],
-                shape_xy,
-            ],
-            [tf.float32],
-            stateful=False,
-        )[0]
-        transform_t.set_shape([8])
+                shape_xy)
         # print(transform_t.eval())
         # print([t.eval() for t in result])
         transformed_t = tf.contrib.image.transform(
