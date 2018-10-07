@@ -85,7 +85,7 @@ def _parameterized_flattened_homography(
     matrix = tf.matmul(flip, tf.matmul(matrix, flip))
 
     # invert, since actually the inverse transformation will be done
-    matrix = tf.linalg.inv(matrix)
+    #matrix = tf.linalg.inv(matrix)
 
     # it expects the lower right corner to be 1 - the transformation is
     # invariant to scalar multiplication so just divide by it
