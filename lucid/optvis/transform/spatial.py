@@ -110,16 +110,13 @@ def homography_parameters_random(shape, seed=None):
     """Returns parameters for homography() that create a random transform
     that usually results in only slight adjustment of the image"""
     d = tf.reduce_max(shape)
-    a = (shape[0]/2)*(d/2)
-    b = tf.to_float(a)
-    c = 1.0 / b
     return dict(
       translation1_x = tf.truncated_normal([], stddev=3, seed=seed),
       translation1_y = tf.truncated_normal([], stddev=3, seed=seed),
       rotationAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
       scalingAngleInRadians = angle2rads(tf.truncated_normal([], stddev=2.5, seed=seed)),
-      scaling_x = 1.0 + tf.truncated_normal([], stddev=1e-2, seed=seed, dtype=tf.float64),
-      scaling_y = 1.0 + tf.truncated_normal([], stddev=1e-2, seed=seed, dtype=tf.float64),
+      scaling_x = tf.to_float(1.0) + tf.truncated_normal([], stddev=1e-2, seed=seed),
+      scaling_y = tf.to_float(1.0) + tf.truncated_normal([], stddev=1e-2, seed=seed),
 
       # Intuition for vanishing_points:
       # - values above roughly 1/(size/2) make no sense because one edge of the
